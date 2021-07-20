@@ -1,0 +1,85 @@
+name: Package INTERLIS-UML-Editor
+on:
+  push:
+    branches:
+      - 'main'
+env:
+  VERSION: 3.7.6
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: ['ubuntu-20.04', 'macos-latest', 'windows-latest']
+        include:
+          - os: 'ubuntu-20.04'
+            label: 'linux'
+            package: 'deb'
+            icon: 'icons/icon-umleditor-v2-128x128.png'
+            asset_prefix: 'umleditor_'
+            asset_suffix: '-1_amd64'
+          - os: 'macos-latest'
+            label: 'mac'
+            package: 'pkg'
+            icon: 'icons/icon-umleditor-v2-128x128.icns'
+            asset_prefix: 'umleditor-'
+            asset_suffix: ''
+          - os: 'windows-latest'
+            label: 'win'
+            package: 'msi'
+            icon: 'icons/icon-umleditor-v2-128x128.ico'
+            asset_prefix: 'umleditor-'
+            asset_suffix: ''
+    runs-on: ${{matrix.os}}
+  
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - name: 'Download zipped umleditor release'
+        run: |
+          curl -L https://downloads.interlis.ch/umleditor/umleditor-${{env.VERSION}}.zip -o umleditor.zip
+      - name: 'Unzip umleditor release'
+        run: |
+          unzip umleditor.zip
+      - name: 'Setup Java 16'
+        uses: actions/setup-java@v1
+        with:
+          java-version: 16
+      - name: 'Get dependencies (jdeps)'
+        run: |
+          echo "DEPS=$(jdeps --class-path 'libs/*' --multi-release base -recursive --ignore-missing-deps --print-module-deps umleditor-${{env.VERSION}}.jar)" >> $GITHUB_ENV
+        shell: bash
+      - name: 'Create JRE (jlink)'
+        run: |
+          jlink --add-modules ${{env.DEPS}} --output umleditor-jre
+      - name: 'Copy main jar to libs'
+        run: |
+          cp umleditor-${{env.VERSION}}.jar libs/
+      - name: 'Create package (jpackage)'
+        run: |
+          jpackage --icon ${{matrix.icon}} --name umleditor --type ${{matrix.package}} --input libs --main-jar umleditor-${{env.VERSION}}.jar -d output --runtime-image umleditor-jre --app-version ${{env.VERSION}}
+        shell: bash
+      - name: List all files in output directory
+        run: ls -la output
+        shell: bash
+      - name: List all files in project root directory
+        run: ls -la 
+        shell: bash
+      - name: 'Setup Java 8'
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: Upload file to bucket
+        shell: bash
+        run: |
+          ./gradlew uploadFile 
+        env:
+          FILENAME: ${{matrix.asset_prefix}}${{env.VERSION}}${{matrix.asset_suffix}}.${{matrix.package}}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "eu-central-1"
