@@ -1,0 +1,24 @@
+buildscript {
+    repositories {
+        maven { url "http://jars.interlis.ch" }
+        maven { url "https://repo.osgeo.org/repository/release/" }
+        maven { url "https://plugins.gradle.org/m2/" }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'ch.so.agi', name: 'gretl',  version: '2.1.+'
+    }
+}
+
+apply plugin: "ch.so.agi.gretl"
+
+task uploadFile(type: ch.so.agi.gretl.tasks.S3Upload) {
+    accessKey = System.getenv("AWS_ACCESS_KEY_ID")
+    secretKey = System.getenv("AWS_SECRET_ACCESS_KEY")
+    sourceFile = file("./output/" + System.getenv("FILENAME"))
+    bucketName = "ch.so.agi.ilitools"
+    endPoint = "https://s3.eu-central-1.amazonaws.com" 
+    region = "eu-central-1"
+    acl = "public-read"
+}
