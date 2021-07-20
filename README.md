@@ -5,6 +5,7 @@
 - Warum funktionieren DMG von Github Action nicht?
 - Falls App-Name Punkte beinhaltet, wird die Anwendung (auf macOS only?) nicht gestartet.
 - jdeps auf Apple Silicon funktioniert nicht. 
+- ...
 
 ## Building
 
