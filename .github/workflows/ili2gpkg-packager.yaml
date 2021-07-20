@@ -1,0 +1,87 @@
+name: CI/CD
+on:
+  push:
+    branches:
+     - 'main'
+
+env:
+  VERSION: 4.5.0
+
+jobs:  
+  build:
+    strategy:
+      matrix:
+        os: ['ubuntu-20.04', 'macos-10.15', 'windows-latest']
+        include:
+          - os: 'ubuntu-20.04'
+            label: 'linux'
+            package: 'deb'
+            icon: 'icons/icon-ili2db-128x128.png'
+            asset_prefix: 'ili2gpkg_'
+            asset_suffix: '-1_amd64'
+          - os: 'macos-10.15'
+            label: 'mac'
+            package: 'pkg'
+            icon: 'icons/icon-ili2db-128x128.icns'
+            asset_prefix: 'ili2gpkg-'
+            asset_suffix: ''
+          - os: 'windows-latest'
+            label: 'win'
+            package: 'msi'
+            icon: 'icons/icon-ili2db-128x128.ico'
+            asset_prefix: 'ili2gpkg-'
+            asset_suffix: ''
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - name: 'Download zipped ili2gpkg release'
+        run: |
+          curl -L https://downloads.interlis.ch/ili2gpkg/ili2gpkg-${{env.VERSION}}.zip -o ili2gpkg.zip
+      - name: 'Unzip ili2gpkg release'
+        run: |
+          unzip ili2gpkg.zip
+      - name: 'Setup Java 16'
+        uses: actions/setup-java@v1
+        with:
+          java-version: 16
+      - name: 'Get dependencies (jdeps)'
+        run: |
+          echo "DEPS=$(jdeps --class-path 'libs/*' --multi-release base -recursive --ignore-missing-deps --print-module-deps ili2gpkg-${{env.VERSION}}.jar)" >> $GITHUB_ENV
+        shell: bash
+      - name: 'Create JRE (jlink)'
+        run: |
+          jlink --add-modules ${{env.DEPS}} --output ili2gpkg-jre
+      - name: 'Copy main jar to libs'
+        run: |
+          cp ili2gpkg-${{env.VERSION}}.jar libs/
+      - name: 'Create package (jpackage)'
+        run: |
+          jpackage --icon ${{matrix.icon}} --name ili2gpkg --type ${{matrix.package}} --input libs --main-jar ili2gpkg-${{env.VERSION}}.jar -d output --runtime-image ili2gpkg-jre --app-version ${{env.VERSION}} --java-options -Xmx2g 
+        shell: bash
+      - name: List all files in output directory
+        run: ls -la output
+        shell: bash
+      - name: List all files in project root directory
+        run: ls -la 
+        shell: bash
+      - name: 'Setup Java 8'
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: Upload file to bucket
+        shell: bash
+        run: |
+          ./gradlew uploadFile 
+        env:
+          FILENAME: ${{matrix.asset_prefix}}${{env.VERSION}}${{matrix.asset_suffix}}.${{matrix.package}}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "eu-central-1"
