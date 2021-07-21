@@ -27,7 +27,7 @@ jobs:
             asset_suffix: ''
           - os: 'windows-latest'
             label: 'win'
-            package: 'msi'
+            package: 'exe'
             icon: 'icons/icon-ili2db-128x128.ico'
             asset_prefix: 'ili2gpkg-'
             asset_suffix: ''

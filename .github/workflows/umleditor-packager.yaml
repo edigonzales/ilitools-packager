@@ -27,7 +27,7 @@ jobs:
             asset_suffix: ''
           - os: 'windows-latest'
             label: 'win'
-            package: 'msi'
+            package: 'exe'
             icon: 'icons/icon-umleditor-v2-128x128.ico'
             asset_prefix: 'umleditor-'
             asset_suffix: ''
