@@ -1,11 +1,11 @@
 name: Package ili2gpkg
-# on:
-#   push:
-#     branches:
-#      - 'main'
 
-env:
-  VERSION: 4.5.0
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version?'
+        required: true
 
 jobs:  
   build:
@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - name: 'Download zipped ili2gpkg release'
         run: |
-          curl -L https://downloads.interlis.ch/ili2gpkg/ili2gpkg-${{env.VERSION}}.zip -o ili2gpkg.zip
+          curl -L https://downloads.interlis.ch/ili2gpkg/ili2gpkg-${{ github.event.inputs.version }}.zip -o ili2gpkg.zip
       - name: 'Unzip ili2gpkg release'
         run: |
           unzip ili2gpkg.zip
@@ -54,17 +54,17 @@ jobs:
           java-version: 16
       - name: 'Get dependencies (jdeps)'
         run: |
-          echo "DEPS=$(jdeps --class-path 'libs/*' --multi-release base -recursive --ignore-missing-deps --print-module-deps ili2gpkg-${{env.VERSION}}.jar)" >> $GITHUB_ENV
+          echo "DEPS=$(jdeps --class-path 'libs/*' --multi-release base -recursive --ignore-missing-deps --print-module-deps ili2gpkg-${{ github.event.inputs.version }}.jar)" >> $GITHUB_ENV
         shell: bash
       - name: 'Create JRE (jlink)'
         run: |
           jlink --add-modules ${{env.DEPS}} --output ili2gpkg-jre
       - name: 'Copy main jar to libs'
         run: |
-          cp ili2gpkg-${{env.VERSION}}.jar libs/
+          cp ili2gpkg-${{ github.event.inputs.version }}.jar libs/
       - name: 'Create package (jpackage)'
         run: |
-          jpackage --icon ${{matrix.icon}} --name ili2gpkg --type ${{matrix.package}} --input libs --main-jar ili2gpkg-${{env.VERSION}}.jar -d output --runtime-image ili2gpkg-jre --app-version ${{env.VERSION}} --java-options -Xmx2g 
+          jpackage --icon ${{matrix.icon}} --name ili2gpkg --type ${{matrix.package}} --input libs --main-jar ili2gpkg-${{ github.event.inputs.version }}.jar -d output --runtime-image ili2gpkg-jre --app-version ${{ github.event.inputs.version }} --java-options -Xmx2g 
         shell: bash
       - name: List all files in output directory
         run: ls -la output
@@ -81,7 +81,7 @@ jobs:
         run: |
           ./gradlew uploadFile 
         env:
-          FILENAME: ${{matrix.asset_prefix}}${{env.VERSION}}${{matrix.asset_suffix}}.${{matrix.package}}
+          FILENAME: ${{matrix.asset_prefix}}${{ github.event.inputs.version }}${{matrix.asset_suffix}}.${{matrix.package}}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-central-1"

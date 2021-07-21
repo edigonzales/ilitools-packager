@@ -1,10 +1,12 @@
 name: Package INTERLIS-UML-Editor
-# on:
-#   push:
-#     branches:
-#       - 'main'
-env:
-  VERSION: 3.7.6
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version?'
+        required: true
+
 jobs:
   build:
     strategy:
@@ -42,7 +44,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - name: 'Download zipped umleditor release'
         run: |
-          curl -L https://downloads.interlis.ch/umleditor/umleditor-${{env.VERSION}}.zip -o umleditor.zip
+          curl -L https://downloads.interlis.ch/umleditor/umleditor-${{ github.event.inputs.version }}.zip -o umleditor.zip
       - name: 'Unzip umleditor release'
         run: |
           unzip umleditor.zip
@@ -52,17 +54,17 @@ jobs:
           java-version: 16
       - name: 'Get dependencies (jdeps)'
         run: |
-          echo "DEPS=$(jdeps --class-path 'libs/*' --multi-release base -recursive --ignore-missing-deps --print-module-deps umleditor-${{env.VERSION}}.jar)" >> $GITHUB_ENV
+          echo "DEPS=$(jdeps --class-path 'libs/*' --multi-release base -recursive --ignore-missing-deps --print-module-deps umleditor-${{ github.event.inputs.version }}.jar)" >> $GITHUB_ENV
         shell: bash
       - name: 'Create JRE (jlink)'
         run: |
           jlink --add-modules ${{env.DEPS}} --output umleditor-jre
       - name: 'Copy main jar to libs'
         run: |
-          cp umleditor-${{env.VERSION}}.jar libs/
+          cp umleditor-${{ github.event.inputs.version }}.jar libs/
       - name: 'Create package (jpackage)'
         run: |
-          jpackage --icon ${{matrix.icon}} --name umleditor --type ${{matrix.package}} --input libs --main-jar umleditor-${{env.VERSION}}.jar -d output --runtime-image umleditor-jre --app-version ${{env.VERSION}}
+          jpackage --icon ${{matrix.icon}} --name umleditor --type ${{matrix.package}} --input libs --main-jar umleditor-${{ github.event.inputs.version }}.jar -d output --runtime-image umleditor-jre --app-version ${{ github.event.inputs.version }}
         shell: bash
       - name: List all files in output directory
         run: ls -la output
@@ -79,7 +81,7 @@ jobs:
         run: |
           ./gradlew uploadFile 
         env:
-          FILENAME: ${{matrix.asset_prefix}}${{env.VERSION}}${{matrix.asset_suffix}}.${{matrix.package}}
+          FILENAME: ${{matrix.asset_prefix}}${{ github.event.inputs.version }}${{matrix.asset_suffix}}.${{matrix.package}}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-central-1"
