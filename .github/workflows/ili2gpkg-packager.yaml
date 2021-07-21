@@ -1,8 +1,8 @@
 name: Package ili2gpkg
-on:
-  push:
-    branches:
-     - 'main'
+# on:
+#   push:
+#     branches:
+#      - 'main'
 
 env:
   VERSION: 4.5.0

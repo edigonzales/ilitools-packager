@@ -1,8 +1,8 @@
 name: Package ilivalidator
-on:
-  push:
-    branches:
-     - 'main'
+# on:
+#   push:
+#     branches:
+#      - 'main'
 
 env:
   VERSION: 1.11.10

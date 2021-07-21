@@ -1,8 +1,11 @@
 name: Package ili2c
 on:
-  push:
-    branches:
-     - 'main'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version?'
+        required: true
+        #default: '5.2.2'
 
 env:
   VERSION: 5.2.2
@@ -27,7 +30,7 @@ jobs:
             asset_suffix: ''
           - os: 'windows-latest'
             label: 'win'
-            package: 'msi'
+            package: 'exe'
             icon: 'icons/icon-compiler-128x128.ico'
             asset_prefix: 'ili2c-'
             asset_suffix: ''
@@ -44,7 +47,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - name: 'Download zipped ili2c release'
         run: |
-          curl -L https://downloads.interlis.ch/ili2c/ili2c-${{env.VERSION}}.zip -o ili2c.zip
+          curl -L https://downloads.interlis.ch/ili2c/ili2c-${{ github.event.inputs.version }}.zip -o ili2c.zip
       - name: 'Unzip ili2c release'
         run: |
           unzip ili2c.zip
@@ -61,7 +64,7 @@ jobs:
           jlink --add-modules ${{env.DEPS}} --output ili2c-jre
       - name: 'Create package (jpackage)'
         run: |
-          jpackage --icon ${{matrix.icon}} --name ili2c --type ${{matrix.package}} --input . --main-jar ili2c.jar -d output --runtime-image ili2c-jre --app-version ${{env.VERSION}}
+          jpackage --icon ${{matrix.icon}} --name ili2c --type ${{matrix.package}} --input . --main-jar ili2c.jar -d output --runtime-image ili2c-jre --app-version ${{ github.event.inputs.version }}
         shell: bash
       - name: List all files in output directory
         run: ls -la output
@@ -78,7 +81,7 @@ jobs:
         run: |
           ./gradlew uploadFile 
         env:
-          FILENAME: ${{matrix.asset_prefix}}${{env.VERSION}}${{matrix.asset_suffix}}.${{matrix.package}}
+          FILENAME: ${{matrix.asset_prefix}}${{ github.event.inputs.version }}${{matrix.asset_suffix}}.${{matrix.package}}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-central-1"
