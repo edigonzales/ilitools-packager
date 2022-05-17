@@ -36,46 +36,60 @@ jobs:
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v2
+
       - uses: actions/cache@v1
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
+
       - name: 'Download zipped umleditor release'
         run: |
           curl -L https://downloads.interlis.ch/umleditor/umleditor-${{ github.event.inputs.version }}.zip -o umleditor.zip
+
       - name: 'Unzip umleditor release'
         run: |
           unzip umleditor.zip
-      - name: 'Setup Java 16'
-        uses: actions/setup-java@v1
+
+      - name: 'Setup Java 17'
+        uses: actions/setup-java@v3
         with:
-          java-version: 16
+          java-version: 17
+          distribution: 'liberica'
+
       - name: 'Get dependencies (jdeps)'
         run: |
           echo "DEPS=$(jdeps --class-path 'libs/*' --multi-release base -recursive --ignore-missing-deps --print-module-deps umleditor-${{ github.event.inputs.version }}.jar)" >> $GITHUB_ENV
         shell: bash
+
       - name: 'Create JRE (jlink)'
         run: |
           jlink --add-modules ${{env.DEPS}} --output umleditor-jre
+
       - name: 'Copy main jar to libs'
         run: |
           cp umleditor-${{ github.event.inputs.version }}.jar libs/
+
       - name: 'Create package (jpackage)'
         run: |
           jpackage --icon ${{matrix.icon}} --name umleditor --type ${{matrix.package}} --input libs --main-jar umleditor-${{ github.event.inputs.version }}.jar -d output --runtime-image umleditor-jre --app-version ${{ github.event.inputs.version }}
         shell: bash
+
       - name: List all files in output directory
         run: ls -la output
         shell: bash
+
       - name: List all files in project root directory
         run: ls -la 
         shell: bash
+
       - name: 'Setup Java 8'
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
           java-version: 8
+          distribution: 'liberica'
+
       - name: Upload file to bucket
         shell: bash
         run: |

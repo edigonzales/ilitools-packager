@@ -35,43 +35,56 @@ jobs:
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v2
+
       - uses: actions/cache@v1
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
+
       - name: 'Download zipped ili2c release'
         run: |
           curl -L https://downloads.interlis.ch/ili2c/ili2c-${{ github.event.inputs.version }}.zip -o ili2c.zip
+
       - name: 'Unzip ili2c release'
         run: |
           unzip ili2c.zip
-      - name: 'Setup Java 16'
-        uses: actions/setup-java@v1
+
+      - name: 'Setup Java 17'
+        uses: actions/setup-java@v3
         with:
-          java-version: 16
+          java-version: 17
+          distribution: 'liberica'
+
       - name: 'Get dependencies (jdeps)'
         run: |
           echo "DEPS=$(jdeps --class-path './*' --multi-release base -recursive --ignore-missing-deps --print-module-deps ili2c.jar)" >> $GITHUB_ENV
         shell: bash
+
       - name: 'Create JRE (jlink)'
         run: |
           jlink --add-modules ${{env.DEPS}} --output ili2c-jre
+
       - name: 'Create package (jpackage)'
         run: |
           jpackage --icon ${{matrix.icon}} --name ili2c --type ${{matrix.package}} --input . --main-jar ili2c.jar -d output --runtime-image ili2c-jre --app-version ${{ github.event.inputs.version }}
         shell: bash
+
       - name: List all files in output directory
         run: ls -la output
         shell: bash
+
       - name: List all files in project root directory
         run: ls -la 
         shell: bash
+
       - name: 'Setup Java 8'
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
           java-version: 8
+          distribution: 'liberica'
+
       - name: Upload file to bucket
         shell: bash
         run: |
